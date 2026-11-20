@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>README preview</title>
+<!-- README.md lives at the repository root, so its relative image paths resolve from there. -->
+<base href="../">
+<!-- Approximates github.com's profile README column. README.md is one raw HTML block, so innerHTML matches GitHub's output. -->
+<style>
+  :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2328; --link: #0969da; --code: #818b981f; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #f0f6fc; --link: #4493f8; --code: #656c7633; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); }
+  main { max-width: 846px; margin: 0 auto; padding: 24px;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; }
+  p { margin: 0 0 16px; }
+  img { max-width: 100%; box-sizing: content-box; }
+  a { color: var(--link); text-decoration: none; }
+  code { padding: .2em .4em; font: 85% ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code); border-radius: 6px; }
+</style>
+<main id="readme"></main>
+<script>
+  // The view counter is a live third-party service: previewing must not add hits, so its image is left unloaded here.
+  // python's http.server sends no cache headers, so rebuilt images are stamped to defeat the browser cache.
+  fetch("README.md", { cache: "no-store" }).then(r => r.text()).then(html => {
+    document.getElementById("readme").innerHTML = html
+      .replace(/src="https:\/\/hits\.sh\/[^"]*"/, 'src=""')
+      .replace(/(assets\/[^"]+\.svg)/g, "$1?v=" + Date.now());
+  });
+</script>

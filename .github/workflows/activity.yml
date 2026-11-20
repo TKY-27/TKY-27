@@ -1,0 +1,42 @@
+name: Refresh activity
+
+# Redraws assets/activity-*.svg and assets/habits-*.svg once a day.
+# Kept deliberately cheap: one job, one API request, no dependencies to install,
+# and no run on push. Standard runners on a public repository are free and do
+# not draw on the included Actions minutes.
+# To redraw right away, press "Run workflow" on the Actions tab.
+# Delete this file to keep the drawings as a manual snapshot instead.
+
+on:
+  schedule:
+    - cron: "17 21 * * *" # 06:17 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-activity
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Draw
+        run: python3 tools/build_activity.py assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_LOGIN: ${{ github.repository_owner }}
+      - name: Commit if a drawing changed
+        run: |
+          git add assets/activity-light.svg assets/activity-dark.svg assets/habits-light.svg assets/habits-dark.svg
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh activity"
+          git push
