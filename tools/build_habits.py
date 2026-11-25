@@ -1,7 +1,6 @@
-"""Build the two activity drawings, each in a light and a dark file.
+"""Build the habits drawing in light and dark themes.
 
-assets/activity-*.svg  the last year of contributions as an iris: one spike per day round a red pupil.
-assets/habits-*.svg    a 24-hour dial of commit times, and the languages of the public repositories as a constellation.
+assets/habits-*.svg  a 24-hour dial of commit times and public repository languages.
 
 Standard library only and a single API request, because this also runs daily in
 GitHub Actions where the fonts are absent: numerals come from tools/digits.json.
@@ -35,9 +34,6 @@ SPARK = "M0 -2.6Q0 0 1 0Q0 0 0 2.6Q0 0 -1 0Q0 0 0 -2.6Z"  # unit four-point star
 QUERY = """
 query($login: String!, $since: GitTimestamp!) {
   user(login: $login) {
-    contributionsCollection {
-      contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } }
-    }
     repositories(first: 40, privacy: PUBLIC, ownerAffiliations: OWNER, isFork: false,
                  orderBy: {field: PUSHED_AT, direction: DESC}) {
       nodes {
@@ -71,9 +67,6 @@ def fetch():
         raise RuntimeError(payload["errors"])
     user = payload["data"]["user"]
 
-    calendar = user["contributionsCollection"]["contributionCalendar"]
-    days = [(d["date"], d["contributionCount"]) for w in calendar["weeks"] for d in w["contributionDays"]]
-
     hours, sizes = [0] * 24, collections.Counter()
     for repo in user["repositories"]["nodes"]:
         for edge in repo["languages"]["edges"]:
@@ -87,7 +80,7 @@ def fetch():
             hours[stamp.replace(tzinfo=datetime.timezone.utc).astimezone(LOCAL).hour] += 1
     whole = sum(sizes.values()) or 1
     languages = [(name, size / whole) for name, size in sizes.most_common()]
-    return calendar["totalContributions"], days, hours, languages
+    return hours, languages
 
 
 def numeral(value, size):
@@ -111,89 +104,6 @@ def document(width, height, title, summary, css, body):
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-labelledby="t d">\n'
         f'<title id="t">{title}</title>\n<desc id="d">{summary}</desc>\n<style>\n{css}\n{REDUCED}\n</style>\n{body}\n</svg>\n'
     )
-
-
-# --- the year as an iris -------------------------------------------------------------
-
-IRIS_W, IRIS_H = 1600, 640
-CX, CY, R0 = 390, 320, 130
-GAP_DAYS = 12  # an opening at the top, between the oldest day and today
-WAVE = 9  # seconds for the ripple to travel once round
-
-
-def longest_streak(days):
-    best = run = 0
-    for _, count in days:
-        run = run + 1 if count else 0
-        best = max(best, run)
-    return best
-
-
-def iris(days, t):
-    peak = max(count for _, count in days)
-    best_index = max(i for i, (_, count) in enumerate(days) if count == peak)
-    step = 360 / (len(days) + GAP_DAYS)
-    spikes, months = [], []
-    for i, (date, count) in enumerate(days):
-        angle = -90 + (GAP_DAYS / 2 + i + 0.5) * step
-        if date.endswith("-01"):
-            x, y = polar(CX, CY, R0 - 30, angle)
-            name = datetime.date.fromisoformat(date).strftime("%b").upper()
-            months.append(f'<text x="{x:.1f}" y="{y + 6:.1f}" text-anchor="middle" class="month">{name}</text>')
-        if not count:
-            spikes.append(f'<g transform="rotate({angle:.2f} {CX} {CY})"><circle cx="{CX + R0 + 4}" cy="{CY}" r="1.8" class="rest"/></g>')
-            continue
-        # Square root keeps quiet days visible beside the loudest one.
-        length = 16 + 165 * math.sqrt(count / peak)
-        fill = RED if i == best_index else t["ink"]
-        wait = WAVE * (1 - i / len(days))
-        spikes.append(
-            f'<g transform="rotate({angle:.2f} {CX} {CY})"><path class="spike" fill="{fill}" '
-            f'style="animation-delay:calc(var(--t0,0s) - {wait:.2f}s)" '
-            f'd="M{CX + R0} {CY - 1.9}L{CX + R0 + length:.1f} {CY}L{CX + R0} {CY + 1.9}Z"/></g>'
-        )
-    return (
-        f'<circle cx="{CX}" cy="{CY}" r="{R0 - 7}" fill="none" stroke="{t["ink"]}" stroke-width="1.2" opacity=".3"/>'
-        + "".join(spikes) + "".join(months)
-        + f'<circle class="pupil" cx="{CX}" cy="{CY}" r="37" fill="{RED}"/>'
-        + f'<path transform="translate({CX - 9} {CY - 10}) scale(4 3.5)" d="{SPARK}" fill="#fff" opacity=".9"/>'
-    )
-
-
-def stat(x, y, label, value, unit, t):
-    return (
-        f'<text x="{x}" y="{y}" class="label">{label}</text>'
-        f'<g transform="translate({x} {y + 96})" fill="{t["ink"]}">{numeral(value, 104)[0]}</g>'
-        f'<text x="{x + 3}" y="{y + 132}" class="unit">{unit}</text>'
-    )
-
-
-def build_iris(total, days, t):
-    peak_date, peak = max(reversed(days), key=lambda day: day[1])
-    active = sum(1 for _, count in days if count)
-    streak = longest_streak(days)
-    summary = (
-        f"{total:,} contributions in the last 12 months. Best day {peak} on {peak_date}. "
-        f"Longest streak {streak} days. Active on {active} of {len(days)} days."
-    )
-    css = (
-        f'.label{{font:500 20px {MONO};letter-spacing:.14em;fill:{t["label"]}}}\n'
-        f'.unit{{font:500 18px {MONO};letter-spacing:.12em;fill:{t["label"]}}}\n'
-        f'.month{{font:500 17px {MONO};letter-spacing:.06em;fill:{t["label"]}}}\n'
-        f'.rest{{fill:{t["ink"]};opacity:.35}}\n'
-        f".spike{{transform-box:fill-box;transform-origin:0 50%;animation:ripple {WAVE}s ease-in-out infinite}}\n"
-        ".pupil{transform-box:fill-box;transform-origin:center;animation:dilate 6s ease-in-out var(--t0,0s) infinite}\n"
-        "@keyframes ripple{0%,16%,100%{transform:scaleX(1)}8%{transform:scaleX(1.22)}}\n"
-        "@keyframes dilate{0%,100%{transform:scale(.86)}50%{transform:scale(1.08)}}"
-    )
-    body = (
-        iris(days, t)
-        + stat(820, 144, "CONTRIBUTIONS", total, "LAST 12 MONTHS", t)
-        + stat(820, 372, "BEST DAY", peak, peak_date, t)
-        + stat(1230, 144, "LONGEST STREAK", streak, "DAYS", t)
-        + stat(1230, 372, "ACTIVE DAYS", active, f"OF {len(days)}", t)
-    )
-    return document(IRIS_W, IRIS_H, "Activity", summary, css, body)
 
 
 # --- the day as a dial, the languages as a constellation ------------------------------
@@ -305,9 +215,7 @@ def build_habits(hours, languages, t):
 
 if __name__ == "__main__":
     out = sys.argv[1]
-    total, days, hours, languages = fetch()
+    hours, languages = fetch()
     for theme, t in THEMES.items():
-        with open(os.path.join(out, f"activity-{theme}.svg"), "w") as f:
-            f.write(build_iris(total, days, t))
         with open(os.path.join(out, f"habits-{theme}.svg"), "w") as f:
             f.write(build_habits(hours, languages, t))

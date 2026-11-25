@@ -3,7 +3,6 @@
 Every mark is drawn here, not fetched, in one vocabulary taken from the icon art:
 a solid ink shape, a hollow outlined shape, and a single red point.
 
-All animation delays hang off --t0 so tools/contact_sheet.py can freeze any moment.
 With animations off (reduced motion) each mark rests in its recognisable pose.
 """
 

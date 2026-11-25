@@ -9,5 +9,5 @@ $run tools/build_hero.py assets
 $run tools/build_icons.py assets/icons
 $run tools/build_wordmarks.py assets/type
 $run tools/build_qr.py assets/icons/scan.svg
-python3 tools/build_activity.py assets
+python3 tools/build_habits.py assets
 python3 tools/stamp_readme.py README.md assets/hero-light.svg

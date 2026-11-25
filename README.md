@@ -76,10 +76,6 @@ the most a Version 40 code can hold at error-correction level L (7%).<br>
 <img src="assets/type/activity-light.svg" width="100%" alt="Activity">
 </picture>
 <picture>
-<source media="(prefers-color-scheme: dark)" srcset="assets/activity-dark.svg">
-<img src="assets/activity-light.svg" width="100%" alt="My contributions over the last 12 months, drawn as an iris. Each spike around the red pupil is one day, and its length is that day's count.">
-</picture>
-<picture>
 <source media="(prefers-color-scheme: dark)" srcset="assets/habits-dark.svg">
 <img src="assets/habits-light.svg" width="100%" alt="A 24-hour dial of when I commit, in JST, and the languages of my public repositories drawn as a constellation.">
 </picture>

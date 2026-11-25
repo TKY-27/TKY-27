@@ -121,7 +121,7 @@ def project(text, badge, ink):
 
 
 def export_digits(path):
-    """Outline the numerals once, so build_activity.py can set numbers where the font is absent."""
+    """Outline the numerals once, so build_habits.py can set numbers where the font is absent."""
     digits = {}
     for ch in "0123456789,":
         d, advance, _ = outline(CELESTIAL, ch, 1000)
